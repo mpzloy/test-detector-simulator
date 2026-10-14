@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id               String          @id
+  keyHash          String
+  model            String?
+  hardwareRev      String?
+  firmwareVersion  String?
+  batteryPercent   Int?
+  uptimeSeconds    Int?
+  status           String          @default("UNKNOWN")
+  diagnosticsJson  String?
+  lastSeenAt       DateTime?
+  lastDiagnosticAt DateTime?
+  createdAt        DateTime        @default(now())
+  errors           DeviceError[]
+  updates          UpdateSession[]
+}
+
+model Firmware {
+  id             String          @id @default(cuid())
+  version        String
+  model          String
+  hardwareRev    String
+  changelog      String
+  filename       String
+  storedFilename String
+  sha256         String
+  sizeBytes      Int
+  createdAt      DateTime        @default(now())
+  updates        UpdateSession[]
+
+  @@index([model, hardwareRev, version])
+}
+
+model DeviceError {
+  id          String   @id @default(cuid())
+  deviceId    String
+  code        String
+  message     String
+  detailsJson String?
+  createdAt   DateTime @default(now())
+  device      Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt])
+}
+
+model UpdateSession {
+  id           String    @id @default(cuid())
+  deviceId     String
+  firmwareId   String
+  status       String    @default("OFFERED")
+  errorMessage String?
+  offeredAt    DateTime  @default(now())
+  confirmedAt  DateTime?
+  finishedAt   DateTime?
+  device       Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  firmware     Firmware  @relation(fields: [firmwareId], references: [id])
+
+  @@index([deviceId, offeredAt])
+}
